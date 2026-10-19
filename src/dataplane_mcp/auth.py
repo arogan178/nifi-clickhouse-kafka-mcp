@@ -32,7 +32,8 @@ class OIDCVerifier:
         self.issuer = cfg.issuer
         self.resource = resource
         self._jwks: jwt.PyJWKClient | None = None
-        self._refreshed = 0.0
+        # -inf, not 0: monotonic time starts at boot, so a fresh container would wait a minute for its first refresh.
+        self._refreshed = float("-inf")
 
     def jwks(self) -> jwt.PyJWKClient:
         if self._jwks is None:

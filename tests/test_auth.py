@@ -123,7 +123,9 @@ def test_issuer_with_trailing_slash_is_compared_as_configured():
     assert anyio.run(v.verify_token, token()) is None
 
 
-def test_unknown_key_ids_refetch_at_most_once_a_minute():
+def test_unknown_key_ids_refetch_at_most_once_a_minute(monkeypatch):
+    # Just after boot, as on a fresh container: the first refresh must still happen.
+    monkeypatch.setattr("dataplane_mcp.auth.time.monotonic", lambda: 5.0)
     v = verifier()
     for _ in range(5):
         forged = jwt.encode({"iss": ISSUER}, KEY, algorithm="RS256", headers={"kid": "nope"})
