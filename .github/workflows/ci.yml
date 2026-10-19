@@ -28,7 +28,7 @@ jobs:
         working-directory: examples/demo
         run: |
           docker compose up -d
-          for i in $(seq 1 60); do
+          for _ in $(seq 1 60); do
             [ "$(curl -sk -o /dev/null -w '%{http_code}' https://localhost:8443/nifi-api/flow/about)" = 401 ] && break
             sleep 5
           done

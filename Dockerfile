@@ -1,5 +1,9 @@
 FROM python:3.13-slim
 
+LABEL io.modelcontextprotocol.server.name="io.github.arogan178/dataplane-mcp" \
+      org.opencontainers.image.source="https://github.com/arogan178/dataplane-mcp" \
+      org.opencontainers.image.licenses="Apache-2.0"
+
 COPY --from=ghcr.io/astral-sh/uv:0.9 /uv /usr/local/bin/uv
 WORKDIR /app
 COPY pyproject.toml uv.lock README.md LICENSE ./

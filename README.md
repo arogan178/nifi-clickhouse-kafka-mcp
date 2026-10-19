@@ -1,5 +1,7 @@
 # dataplane-mcp
 
+<!-- mcp-name: io.github.arogan178/dataplane-mcp -->
+
 A read-only [MCP](https://modelcontextprotocol.io) server that lets AI assistants look inside **Apache NiFi**,
 **ClickHouse** and **Kafka**: one server, every environment, and nothing it can break.
 
