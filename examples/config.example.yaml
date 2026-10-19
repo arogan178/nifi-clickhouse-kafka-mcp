@@ -1,0 +1,79 @@
+# Every option, with defaults. ${VAR} and ${VAR:-default} read environment variables; a missing ${VAR}
+# without a default stops the server at startup.
+
+# HTTP mode only: the address clients use, and the OIDC provider that issues their tokens.
+# Without auth, HTTP only binds to 127.0.0.1 unless you pass --allow-unauthenticated.
+public_url: https://mcp.example.com
+auth:
+  issuer: https://keycloak.example.com/realms/acme   # must serve /.well-known/openid-configuration
+  audience: dataplane-mcp                            # the token's aud must contain this
+  required_group: mcp-users                          # optional; omit to accept any valid token
+  groups_claim: groups                               # dotted path, e.g. realm_access.roles
+  username_claim: preferred_username                 # falls back to sub; shown in audit logs
+
+# Field names masked (case-insensitive) in Kafka messages, NiFi FlowFiles, attributes and state, and ClickHouse
+# result columns. Secret-looking names (password, token, secret, api key, authorization, credential) are always masked.
+masked_fields: [email, phone, iban]
+
+# Tools to leave out; shell patterns.
+disabled_tools: []
+
+# Largest tool result in characters; bigger results fail with a hint to page or filter.
+max_result_chars: 400000
+
+# Binary Kafka values and FlowFile content can't be masked, so they are described (size only) unless this is true.
+show_binary: false
+
+environments:
+  prod:
+    description: Production, EU region            # shown to the model by the environments tool
+
+    nifi:
+      url: https://nifi.example.com:8443          # /nifi-api is added if missing
+      # One of:
+      auth: {type: mtls, cert: /certs/mcp.pem, key: /certs/mcp.key}
+      # auth: {type: password, username: mcp, password: "${NIFI_PASSWORD}"}   # single-user, LDAP or Kerberos login
+      # auth: {type: token, token: "${NIFI_TOKEN}"}                         # a bearer token you manage
+      # auth: {type: none}                                                  # unsecured NiFi
+      ca_bundle: /certs/ca.pem                    # default: system CAs
+      verify_tls: true
+      timeout_seconds: 30
+
+    clickhouse:
+      url: https://clickhouse.example.com:8443    # the HTTP(S) interface
+      user: mcp_reader
+      password: "${CLICKHOUSE_PASSWORD}"
+      database: null                              # default database for queries
+      ca_bundle: null
+      verify_tls: true
+      cluster: null
+      max_rows: 1000                              # most rows clickhouse_query returns
+      timeout_seconds: 120
+      # Settings sent with every query. Needs a readonly=2 user; a readonly=1 user can't change settings,
+      # so set limits in its profile instead.
+      settings:
+        max_execution_time: 60
+        max_memory_usage: 10000000000
+      # Table functions to allow on top of the internal ones (numbers, merge, clusterAllReplicas, ...).
+      allowed_table_functions: []
+
+    kafka:
+      config:                                     # librdkafka properties, passed through unchanged
+        bootstrap.servers: kafka.example.com:9093
+        security.protocol: SASL_SSL               # or SSL for mTLS, PLAINTEXT, SASL_PLAINTEXT
+        sasl.mechanism: SCRAM-SHA-512             # or PLAIN, SCRAM-SHA-256, OAUTHBEARER
+        sasl.username: mcp-reader
+        sasl.password: "${KAFKA_PASSWORD}"
+        ssl.ca.location: /certs/kafka-ca.pem
+        # ssl.certificate.location / ssl.key.location for mTLS
+      schema_registry:                            # optional; decodes Confluent-framed Avro and JSON Schema
+        url: https://registry.example.com
+        username: mcp
+        password: "${REGISTRY_PASSWORD}"
+        ca_bundle: null
+
+  staging:
+    clickhouse:
+      url: http://clickhouse.staging.internal:8123
+      user: mcp_reader
+      password: "${STAGING_CLICKHOUSE_PASSWORD}"

@@ -1,0 +1,17 @@
+# Config for the demo stack in compose.yaml. Real deployments put secrets in environment variables: ${VAR}.
+masked_fields: [customer_email, email]
+environments:
+  demo:
+    description: Local demo stack from examples/demo
+    nifi:
+      url: https://localhost:8443
+      auth: {type: password, username: admin, password: "${NIFI_PASSWORD:-demo-password-123}"}
+      verify_tls: false   # the demo NiFi uses a self-signed certificate
+    clickhouse:
+      url: http://localhost:8123
+      user: mcp
+      password: "${CLICKHOUSE_PASSWORD:-mcp-password}"
+      max_rows: 500
+    kafka:
+      config:
+        bootstrap.servers: localhost:9092

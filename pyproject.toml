@@ -1,0 +1,57 @@
+[project]
+name = "dataplane-mcp"
+version = "0.1.0"
+description = "Read-only MCP server for Apache NiFi, ClickHouse and Kafka, with OIDC, per-user audit and secret masking"
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+authors = [{ name = "Andrea Bugeja" }]
+keywords = ["mcp", "model-context-protocol", "nifi", "clickhouse", "kafka", "llm", "claude", "observability"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: System Administrators",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Topic :: Database",
+    "Topic :: System :: Monitoring",
+]
+dependencies = [
+    "mcp>=2.3,<3",
+    "pyjwt[crypto]>=2.10",
+    "requests>=2.32",
+    "confluent-kafka>=2.6",
+    "pyyaml>=6",
+    "pydantic>=2.12",
+    "prometheus-client>=0.21",
+    "anyio>=4.9",
+    "starlette>=0.48",
+]
+
+[project.optional-dependencies]
+avro = ["fastavro>=1.9"]
+
+[project.scripts]
+dataplane-mcp = "dataplane_mcp.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/arogan178/dataplane-mcp"
+Issues = "https://github.com/arogan178/dataplane-mcp/issues"
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.8", "fastavro>=1.9"]
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

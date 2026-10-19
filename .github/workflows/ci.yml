@@ -1,0 +1,47 @@
+name: ci
+on:
+  push: {branches: [main]}
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with: {python-version: "${{ matrix.python }}"}
+      - run: uv sync --locked
+      - run: uv run ruff check src tests scripts
+      - run: uv run ruff format --check src tests scripts
+      - run: uv run pytest
+
+  end-to-end:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --locked
+      - name: Start NiFi, ClickHouse and Kafka
+        working-directory: examples/demo
+        run: |
+          docker compose up -d
+          for i in $(seq 1 60); do
+            [ "$(curl -sk -o /dev/null -w '%{http_code}' https://localhost:8443/nifi-api/flow/about)" = 401 ] && break
+            sleep 5
+          done
+      - name: Seed
+        working-directory: examples/demo
+        run: |
+          uv run python seed_nifi.py
+          docker compose exec -T kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --topic orders --partitions 3
+          python3 -c '
+          import json
+          for i in range(300):
+              print(f"order-{i}|" + json.dumps({"id": i, "customer": {"email": f"user{i % 50}@example.com", "tier": ["gold", "silver"][i % 2]}, "amount": i * 1.5, "api_key": "k-secret"}))
+          ' | docker compose exec -T kafka /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic orders --reader-property parse.key=true --reader-property 'key.separator=|'
+          docker compose exec -T kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic orders --group billing --from-beginning --max-messages 120 > /dev/null
+      - run: uv run pytest tests/integration
+        env: {DATAPLANE_MCP_DEMO: "1"}
