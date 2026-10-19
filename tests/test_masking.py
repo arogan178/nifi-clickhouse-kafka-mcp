@@ -15,6 +15,9 @@ from dataplane_mcp.masking import mask_document, mask_text
         ("password =hunter2", "password =***"),
         ("db_password: hunter2, user: app", "db_password: ***, user: app"),
         ("Authorization: Bearer abc.def", "Authorization: ***"),
+        ('<Password type="x">hunter2</Password>', '<Password type="x">***</Password>'),
+        ("curl -u admin:hunter2 https://x", "curl -u admin:*** https://x"),
+        ("curl --user=admin:hunter2 https://x", "curl --user=admin:*** https://x"),
     ],
 )
 def test_masks_common_secret_forms(text, masked):

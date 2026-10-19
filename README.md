@@ -151,7 +151,8 @@ Highlights:
 The gateway is the first lock. It registers only read tools (each annotated `readOnlyHint`). The NiFi client can only
 send GETs plus the temporary queue-listing and provenance requests NiFi needs, and refuses ids that would reach another
 endpoint. Every ClickHouse statement is parsed by ClickHouse (`EXPLAIN AST`) before it runs: only `SELECT`, `WITH`,
-`SHOW`, `DESCRIBE`, `EXISTS` and `EXPLAIN` pass, and only allowlisted table functions. Kafka is only ever read with
+`SHOW`, `DESCRIBE`, `EXISTS` and `EXPLAIN` pass, table functions must be on an allowlist wherever they appear, and
+the few scalar functions that reach the network or disk (`hasColumnInTable`, `file`, ...) are refused. Kafka is only ever read with
 `assign()`. Tests fail the build if a write path appears.
 
 The backend is the second lock: give the gateway a NiFi identity with view-only policies, a ClickHouse user with

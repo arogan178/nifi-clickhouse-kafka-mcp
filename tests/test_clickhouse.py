@@ -166,3 +166,46 @@ def test_scalar_functions_are_not_table_functions():
 )
 def test_param_values_use_clickhouse_text_format(value, encoded):
     assert param_value(value) == encoded
+
+
+HAS_COLUMN = """SelectWithUnionQuery (children 1)
+ ExpressionList (children 1)
+  SelectQuery (children 1)
+   ExpressionList (children 1)
+    Function hasColumnInTable (children 1)
+     ExpressionList (children 6)
+      Literal 'attacker:9999'"""
+
+NUMBERS_WITH_SCALAR_ARG = """SelectWithUnionQuery (children 1)
+ ExpressionList (children 1)
+  SelectQuery (children 2)
+   TablesInSelectQuery (children 1)
+    TablesInSelectQueryElement (children 1)
+     TableExpression (children 1)
+      Function numbers (children 1)
+       ExpressionList (children 1)
+        Function plus (children 1)"""
+
+EXPLAIN_WITH_SETTINGS = """Explain EXPLAIN PIPELINE (children 2)
+ Set
+ SelectWithUnionQuery (children 1)
+  ExpressionList (children 1)"""
+
+
+def test_refuses_scalar_functions_that_reach_outside():
+    with pytest.raises(ValueError, match="hasColumnInTable"):
+        check_ast(HAS_COLUMN)
+
+
+def test_without_the_server_list_functions_in_from_must_be_allowlisted():
+    check_ast(NUMBERS_WITH_SCALAR_ARG)
+    with pytest.raises(ValueError, match="plus"):
+        check_ast(NUMBERS_WITH_SCALAR_ARG, strict=True)
+    with pytest.raises(ValueError, match="icebergCluster"):
+        check_ast(CLUSTER_URL.replace("Function url", "Function icebergCluster"), strict=True)
+
+
+def test_explain_settings_are_skipped_to_find_the_statement():
+    check_ast(EXPLAIN_WITH_SETTINGS)
+    with pytest.raises(ValueError, match="InsertQuery"):
+        check_ast(EXPLAIN_WITH_SETTINGS.replace(" SelectWithUnionQuery", " InsertQuery"))

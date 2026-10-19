@@ -35,14 +35,25 @@ INTERNAL_TABLE_FUNCTIONS = frozenset(
         "format",
     }
 )
-# Used when system.table_functions can't be read; the server's own list is preferred because it grows.
+# Used when system.table_functions can't be read (ClickHouse 26.3's list); then checks also fail closed.
 KNOWN_TABLE_FUNCTIONS = INTERNAL_TABLE_FUNCTIONS | frozenset(
-    """url urlcluster s3 s3cluster gcs oss cosn azureblobstorage azureblobstoragecluster hdfs hdfscluster file
-    filecluster remote remotesecure mysql postgresql mongodb jdbc odbc sqlite redis executable input iceberg icebergs3
-    icebergs3cluster icebergazure icebergazurecluster icebergHDFS iceberglocal deltalake deltalakes3 deltalakeazure
-    deltalakelocal hudi hive arrowflight ytsaurus paimon paimons3 paimonazure paimonhdfs paimonlocal dictionary
-    fuzzjson fuzzquery format generaterandomstructure""".lower().split()
+    """
+    arrowflight azureblobstorage azureblobstoragecluster cluster clusterallreplicas cosn deltalake
+    deltalakeazure deltalakeazurecluster deltalakecluster deltalakelocal deltalakes3 deltalakes3cluster
+    dictionary executable file filecluster format fuzzjson fuzzquery gcs generaterandom generateseries
+    generate_series hdfs hdfscluster hive hudi hudicluster iceberg icebergazure icebergazurecluster
+    icebergcluster iceberghdfs iceberghdfscluster iceberglocal iceberglocalcluster icebergs3 icebergs3cluster
+    input jdbc loop merge mergetreeanalyzeindexes mergetreeanalyzeindexesuuid mergetreeindex mergetreeprojection
+    mergetreetextindex mongodb mysql null numbers numbers_mt odbc oss paimon paimonazure paimonazurecluster
+    paimoncluster paimonhdfs paimonhdfscluster paimonlocal paimons3 paimons3cluster postgresql primes
+    prometheusquery prometheusqueryrange redis remote remotesecure s3 s3cluster sqlite timeseriesdata
+    timeseriesmetrics timeseriesselector timeseriestags url urlcluster values view viewexplain viewifpermitted
+    ytsaurus zeros zeros_mt
+    """.split()
 )
+# Scalar functions that reach outside the server or change state: hasColumnInTable connects to any host it is given,
+# file reads server files, generateSerialID writes to Keeper, catboostEvaluate loads a model from disk.
+DENIED_FUNCTIONS = frozenset({"hascolumnintable", "file", "generateserialid", "catboostevaluate"})
 INTERNAL_ROWS = 100_000
 
 
@@ -50,23 +61,34 @@ def check_ast(
     ast: str,
     allowed_functions: frozenset[str] = INTERNAL_TABLE_FUNCTIONS,
     table_functions: frozenset[str] = KNOWN_TABLE_FUNCTIONS,
+    strict: bool = False,
 ) -> None:
     """Refuse a statement whose EXPLAIN AST is not a read, or that names a table function not allowed anywhere,
     including inside another function's arguments, such as cluster('c', url(...)), or as a scalar such as file()."""
     lines = ast.splitlines()
     root = lines[0].split(None, 1)[0] if lines else ""
-    # EXPLAIN wraps another statement; that one must be a read too.
-    depth = 0
-    while root == "Explain" and len(lines) > depth + 1:
-        depth += 1
-        root = lines[depth].split(None, 1)[0]
+    # EXPLAIN wraps another statement (after any settings); that one must be a read too.
+    position = 0
+    while root == "Explain":
+        indent = len(lines[position]) - len(lines[position].lstrip())
+        children = [
+            j
+            for j in range(position + 1, len(lines))
+            if len(lines[j]) - len(lines[j].lstrip()) == indent + 1 and lines[j].split()[0] != "Set"
+        ]
+        if not children:
+            break
+        position = children[0]
+        root = lines[position].split(None, 1)[0]
     if not root.startswith(READ_ROOTS):
         raise ValueError(f"only SELECT, WITH, SHOW, DESCRIBE, EXISTS and EXPLAIN statements are allowed, not {root}")
     refused = set()
     for i, line in enumerate(lines):
         words = line.split()
-        if words[:1] == ["Function"] and words[1].lower() in table_functions - allowed_functions:
-            refused.add(words[1])
+        if words[:1] == ["Function"]:
+            name = words[1].lower()
+            if name in DENIED_FUNCTIONS or (name in table_functions and name not in allowed_functions):
+                refused.add(words[1])
         if words[:1] != ["TableExpression"]:
             continue
         # Whatever stands in the FROM position must be allowed, even if the server's list doesn't know it.
@@ -76,13 +98,14 @@ def check_ast(
             if child_indent <= indent:
                 break
             child_words = child.split()
-            if child_indent == indent + 1 and child_words[0] == "Function":
+            # Without the server's list, any function inside the FROM position must be allowlisted (fail closed).
+            if child_words[0] == "Function" and (strict or child_indent == indent + 1):
                 if child_words[1].lower() not in allowed_functions:
                     refused.add(child_words[1])
     if refused:
         raise ValueError(
-            f"table function {', '.join(sorted(refused))} is not allowed; only functions that read ClickHouse itself "
-            "are, unless the server config adds them to allowed_table_functions"
+            f"function {', '.join(sorted(refused))} is not allowed: it can reach outside ClickHouse. Only table functions "
+            "that read ClickHouse itself are allowed, unless the server config adds them to allowed_table_functions"
         )
 
 
@@ -135,10 +158,12 @@ class ClickHouse:
         )
         return response.text if response.ok else None
 
-    def table_functions(self) -> frozenset[str]:
+    def table_functions(self) -> frozenset[str] | None:
+        """The server's table functions, or None if they can't be read (not cached, so it is retried)."""
         if self._table_functions is None:
             names = self._scalar("SELECT lower(name) FROM system.table_functions")
-            self._table_functions = frozenset(names.split()) | KNOWN_TABLE_FUNCTIONS if names else KNOWN_TABLE_FUNCTIONS
+            if names:
+                self._table_functions = frozenset(names.split()) | KNOWN_TABLE_FUNCTIONS
         return self._table_functions
 
     @property
@@ -162,7 +187,8 @@ class ClickHouse:
         )
         if not response.ok:
             raise ValueError(f"ClickHouse could not parse the query: {response.text[:1000]}")
-        check_ast(response.text, self.allowed_functions, self.table_functions())
+        known = self.table_functions()
+        check_ast(response.text, self.allowed_functions, known or KNOWN_TABLE_FUNCTIONS, strict=known is None)
         return statement
 
     def query(

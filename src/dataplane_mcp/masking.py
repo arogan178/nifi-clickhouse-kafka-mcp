@@ -6,6 +6,7 @@ MASK = "***"
 SECRET_WORDS = r"pass(?:word|wd)?|pwd|secret|token|api[-_]?key|authorization|credential"
 SECRET_KEY = re.compile(SECRET_WORDS, re.I)
 # Quantifiers are bounded so matching stays linear on hostile input; an unbounded [\w.-]* is quadratic.
+CLI_USER = re.compile(r"((?<!\S)(?:-u|--user)[ =]?)([^\s:]{1,256}):(\S{1,256})")
 URL_CREDENTIALS = re.compile(r"(\b[a-z][a-z0-9+.-]{0,31}://[^/\s:@]{0,256}:)[^@\s/]{1,256}@", re.I)
 
 
@@ -20,7 +21,7 @@ def _pair_patterns(masked_fields: frozenset[str]) -> tuple[re.Pattern, re.Patter
         rf"""(?<![\w.-])(\\?["']?)((?:{key}))\1(\s{{0,8}}:\s{{0,8}})(\\?"(?:[^"\\]|\\.)*"|'[^']*'|[^\r\n,;&}}]*)""",
         re.I,
     )
-    element = re.compile(rf"<((?:{key}))>[^<]{{0,10000}}</\1>", re.I)
+    element = re.compile(rf"<((?:{key}))(\s[^<>]{{0,500}})?>[^<]{{0,10000}}</\1>", re.I)
     return equals, colon, element
 
 
@@ -34,7 +35,9 @@ def mask_text(text: str, masked_fields: frozenset[str] = frozenset()) -> str:
         text = URL_CREDENTIALS.sub(rf"\1{MASK}@", text)
         text = colon.sub(lambda m: f"{m[1]}{m[2]}{m[1]}{m[3]}{_masked_like(m[4])}", text)
     if "<" in text:
-        text = element.sub(rf"<\1>{MASK}</\1>", text)
+        text = element.sub(lambda m: f"<{m[1]}{m[2] or ''}>{MASK}</{m[1]}>", text)
+    if "-u" in text or "--user" in text:
+        text = CLI_USER.sub(rf"\1\2:{MASK}", text)
     return text
 
 

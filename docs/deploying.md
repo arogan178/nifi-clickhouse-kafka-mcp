@@ -39,6 +39,10 @@ GRANT SELECT ON system.* TO mcp_reader;     -- schema discovery and clickhouse_h
 `readonly = 2` lets the gateway send the limits in `clickhouse.settings`; `READONLY` stops queries from raising them.
 With `readonly = 1` leave `settings` empty and put limits in the user's profile.
 
+A few ClickHouse functions reach the network or disk without any grant (`hasColumnInTable` connects to any host,
+for example). The gateway refuses them and every outward table function, but as a backstop also limit the ClickHouse
+servers' own egress to what their engines and dictionaries need.
+
 Keep sensitive columns out of reach with column grants (`GRANT SELECT(id, amount) ON shop.orders TO mcp_reader`) or row
 policies. Name-based masking can be bypassed with an alias.
 
