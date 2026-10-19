@@ -431,6 +431,7 @@ dependencies = [
     { name = "pyyaml" },
     { name = "requests" },
     { name = "starlette" },
+    { name = "uvicorn" },
 ]
 
 [package.optional-dependencies]
@@ -457,6 +458,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6" },
     { name = "requests", specifier = ">=2.32" },
     { name = "starlette", specifier = ">=0.48" },
+    { name = "uvicorn", specifier = ">=0.31" },
 ]
 provides-extras = ["avro"]
 

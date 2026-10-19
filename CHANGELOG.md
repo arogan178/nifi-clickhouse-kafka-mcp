@@ -10,5 +10,6 @@ First public release.
   descriptions, column search, health. Statements checked with ClickHouse's own parser; table functions allowlisted.
 - Kafka: cluster overview, topics, consumer groups and lag with retention check, sampling and resumable search
   without joining a group; Schema Registry Avro and JSON Schema decoding; headers.
-- stdio and streamable HTTP; OIDC bearer tokens with group gate and protected resource metadata; audit log;
+- stdio and streamable HTTP; OIDC bearer tokens with group gate and protected resource metadata, or a trusted
+  user header from an authenticating proxy; audit log;
   Prometheus metrics; secret and field masking.

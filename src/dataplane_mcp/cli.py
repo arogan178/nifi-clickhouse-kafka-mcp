@@ -4,7 +4,9 @@ import os
 import sys
 from urllib.parse import urlparse
 
+import uvicorn
 from mcp.server.transport_security import TransportSecuritySettings
+from starlette.responses import PlainTextResponse
 
 from . import config
 from .server import build_server, package_version
@@ -54,22 +56,39 @@ def main(argv: list[str] | None = None) -> None:
         server.run("stdio")
         return
 
-    if not cfg.auth and args.host not in LOOPBACK and not args.allow_unauthenticated:
+    authenticated = cfg.auth or cfg.trusted_user_header
+    if not authenticated and args.host not in LOOPBACK and not args.allow_unauthenticated:
         sys.exit(
-            f"dataplane-mcp: refusing to serve HTTP on {args.host} without auth; configure auth, "
-            "bind to 127.0.0.1, or pass --allow-unauthenticated if a proxy authenticates callers"
+            f"dataplane-mcp: refusing to serve HTTP on {args.host} without auth; configure auth or "
+            "trusted_user_header, bind to 127.0.0.1, or pass --allow-unauthenticated"
         )
     security = None
     if cfg.public_url:
         security = TransportSecuritySettings(allowed_hosts=[urlparse(cfg.public_url).netloc])
-    server.run(
-        "streamable-http",
-        host=args.host,
-        port=args.port,
+    app = server.streamable_http_app(
         # Plain JSON replies: some proxies cut long-lived SSE response streams.
         json_response=True,
         transport_security=security,
+        host=args.host,
     )
+    if cfg.trusted_user_header:
+        app = RequireHeader(app, cfg.trusted_user_header)
+    uvicorn.run(app, host=args.host, port=args.port, log_level="info")
+
+
+class RequireHeader:
+    """Answers 401 to MCP requests without the proxy's user header, before any tool runs."""
+
+    def __init__(self, app, header: str):
+        self.app = app
+        self.header = header.lower().encode()
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and scope["path"].startswith("/mcp"):
+            if not any(k == self.header and v.strip() for k, v in scope["headers"]):
+                await PlainTextResponse("missing trusted user header", status_code=401)(scope, receive, send)
+                return
+        await self.app(scope, receive, send)
 
 
 if __name__ == "__main__":

@@ -114,3 +114,51 @@ def test_source_has_no_write_paths():
     assert re.findall(r"\.session\.(post|put|delete|patch)\(", nifi) == ["post"]
     assert set(re.findall(r'_send\("(\w+)"', nifi)) == {"GET"}
     assert "/access/token" in nifi
+
+
+def test_trusted_user_header_and_auth_are_exclusive():
+    with pytest.raises(ValueError, match="not both"):
+        cfg(public_url="http://x", trusted_user_header="X-User", auth={"issuer": "http://i", "audience": "a"})
+
+
+def test_user_comes_from_the_trusted_header():
+    from types import SimpleNamespace
+
+    from mcp.server.mcpserver.exceptions import ToolError
+
+    box = build_server(cfg(trusted_user_header="X-Auth-Request-Email")).toolbox
+
+    def ctx(headers):
+        return SimpleNamespace(request_context=SimpleNamespace(request=SimpleNamespace(headers=headers)))
+
+    assert box.user(ctx({"X-Auth-Request-Email": "alice@example.com"})) == "alice@example.com"
+    with pytest.raises(ToolError, match="missing X-Auth-Request-Email"):
+        box.user(ctx({}))
+    assert build_server(cfg()).toolbox.user(None).startswith("local:")
+
+
+def test_proxy_guard_rejects_mcp_requests_without_the_header():
+    sent = []
+
+    async def app(scope, receive, send):
+        sent.append("app")
+
+    async def send(message):
+        sent.append(message)
+
+    async def receive():
+        return {"type": "http.request"}
+
+    guard = cli.RequireHeader(app, "X-Auth-Request-Email")
+
+    async def call(path, headers):
+        await guard({"type": "http", "path": path, "headers": headers, "method": "POST"}, receive, send)
+
+    anyio.run(call, "/mcp", [])
+    assert sent[0]["status"] == 401
+    sent.clear()
+    anyio.run(call, "/mcp", [(b"x-auth-request-email", b"alice@example.com")])
+    assert sent == ["app"]
+    sent.clear()
+    anyio.run(call, "/healthz", [])
+    assert sent == ["app"]

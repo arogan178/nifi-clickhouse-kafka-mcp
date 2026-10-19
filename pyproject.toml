@@ -26,6 +26,7 @@ dependencies = [
     "prometheus-client>=0.21",
     "anyio>=4.9",
     "starlette>=0.48",
+    "uvicorn>=0.31",
 ]
 
 [project.optional-dependencies]

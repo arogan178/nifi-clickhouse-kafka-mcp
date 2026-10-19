@@ -97,6 +97,21 @@ through a default client scope.
 API, and point `groups_claim` at wherever it puts groups or roles (`groups`, `roles`, `realm_access.roles`, a namespaced
 claim, ...).
 
+### No identity provider: behind an authenticating proxy
+
+If your team already signs in through oauth2-proxy, Cloudflare Access, Tailscale or similar, leave `auth` out and name
+the header the proxy sets with the user's identity:
+
+```yaml
+trusted_user_header: X-Auth-Request-Email          # oauth2-proxy
+# trusted_user_header: Cf-Access-Authenticated-User-Email   # Cloudflare Access
+# trusted_user_header: Tailscale-User-Login                 # Tailscale Serve
+```
+
+Requests to `/mcp` without the header get 401, and the header's value is the user in the audit log and in ClickHouse's
+`log_comment`. The server trusts the header completely, so it must only be reachable through the proxy: bind it to
+localhost or a private network the proxy alone can reach, and make the proxy strip the header from incoming requests.
+
 ## 3. Run it
 
 Docker:

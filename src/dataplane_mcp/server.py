@@ -11,7 +11,7 @@ from typing import Literal
 import anyio
 from mcp.server.auth.middleware.auth_context import get_access_token
 from mcp.server.auth.settings import AuthSettings
-from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver import Context, MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ToolAnnotations
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
@@ -62,6 +62,18 @@ class Toolbox:
         self.cfg = cfg
         self.registered: list[str] = []
 
+    def user(self, ctx: Context | None) -> str:
+        token = get_access_token()
+        if token:
+            return token.subject
+        if self.cfg.trusted_user_header:
+            request = ctx.request_context.request if ctx else None
+            name = request.headers.get(self.cfg.trusted_user_header, "").strip() if request is not None else ""
+            if not name:
+                raise ToolError(f"missing {self.cfg.trusted_user_header} header")
+            return name[:200]
+        return f"local:{getpass.getuser()}"
+
     def enabled(self, name: str) -> bool:
         return not any(fnmatch.fnmatch(name, pattern) for pattern in self.cfg.disabled_tools)
 
@@ -71,9 +83,8 @@ class Toolbox:
         limit = self.cfg.max_result_chars
 
         @functools.wraps(fn)
-        async def wrapper(**kwargs):
-            token = get_access_token()
-            user = token.subject if token else f"local:{getpass.getuser()}"
+        async def wrapper(ctx: Context, **kwargs):
+            user = self.user(ctx)
             started = time.monotonic()
             outcome, size = "ok", None
             try:
@@ -110,9 +121,12 @@ class Toolbox:
                 audit.info(json.dumps(record, default=str))
             return result
 
-        # The caller's name comes from the token, so it must not appear in the tool's input schema.
+        # The caller's name comes from the token or proxy header, so it must not appear in the input schema;
+        # ctx is injected by the SDK and left out of the schema too.
         signature = inspect.signature(fn)
-        wrapper.__signature__ = signature.replace(parameters=list(signature.parameters.values())[1:])
+        ctx_param = inspect.Parameter("ctx", inspect.Parameter.KEYWORD_ONLY, annotation=Context)
+        wrapper.__signature__ = signature.replace(parameters=list(signature.parameters.values())[1:] + [ctx_param])
+        wrapper.__annotations__ = {**{k: v for k, v in fn.__annotations__.items() if k != "user"}, "ctx": Context}
         del wrapper.__wrapped__
         self.registered.append(fn.__name__)
         # Claude Code otherwise cuts tool output at 25k tokens and spills results over 50k chars to a file.

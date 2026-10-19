@@ -84,7 +84,7 @@ def test_nifi_queue_flowfile_and_provenance_mask_content():
     content = json.loads(flowfile["content"])
     assert content == {"id": 1, "customer_email": "***", "token": "***"}
     generator = next(i for i in call("nifi_search", query="Generate orders")["items"] if i["kind"] == "processor")
-    events = call("nifi_provenance", component_id=generator["id"], start="-1h", limit=5)["events"]
+    events = call("nifi_provenance", component_id=generator["id"], start="-1d", limit=5)["events"]
     assert events
     event = call("nifi_provenance_event", event_id=events[0]["event_id"], content_side="output")
     assert "a@example.com" not in json.dumps(event)

@@ -11,6 +11,10 @@ auth:
   groups_claim: groups                               # dotted path, e.g. realm_access.roles
   username_claim: preferred_username                 # falls back to sub; shown in audit logs
 
+# Instead of auth, behind an authenticating proxy: the header carrying the signed-in user. Only safe when the
+# server can't be reached except through that proxy.
+# trusted_user_header: X-Auth-Request-Email
+
 # Field names masked (case-insensitive) in Kafka messages, NiFi FlowFiles, attributes and state, and ClickHouse
 # result columns. Secret-looking names (password, token, secret, api key, authorization, credential) are always masked.
 masked_fields: [email, phone, iban]

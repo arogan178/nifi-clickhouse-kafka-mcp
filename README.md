@@ -111,8 +111,11 @@ claude mcp add dataplane -- uvx dataplane-mcp --config /path/to/config.yaml
 claude mcp add --transport http --client-id dataplane-mcp --callback-port 47130 dataplane https://mcp.example.com/mcp
 ```
 
-[docs/deploying.md](docs/deploying.md) covers the identity provider, the read-only backend identities, Docker,
-Kubernetes, audit and metrics.
+No identity provider? Put it behind the proxy you already have (oauth2-proxy, Cloudflare Access, Tailscale, ...) and
+set `trusted_user_header` to the header that proxy adds; the user still shows up in the audit log.
+
+[docs/deploying.md](docs/deploying.md) covers the identity provider, proxy mode, the read-only backend identities,
+Docker, Kubernetes, audit and metrics.
 
 ## Tools
 

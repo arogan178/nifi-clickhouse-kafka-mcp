@@ -98,6 +98,8 @@ class AuthConfig(Model):
 class Config(Model):
     public_url: str | None = None
     auth: AuthConfig | None = None
+    # HTTP behind an authenticating proxy (oauth2-proxy, Cloudflare Access, ...): the header naming the user.
+    trusted_user_header: str | None = None
     masked_fields: frozenset[str] = frozenset()
     disabled_tools: frozenset[str] = frozenset()
     max_result_chars: int = 400_000
@@ -109,6 +111,8 @@ class Config(Model):
     def _check(self):
         if not self.environments:
             raise ValueError("define at least one environment")
+        if self.auth and self.trusted_user_header:
+            raise ValueError("use auth or trusted_user_header, not both")
         if self.auth and not self.public_url:
             raise ValueError("auth needs public_url, the address clients use to reach the server")
         return self
