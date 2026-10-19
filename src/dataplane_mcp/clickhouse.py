@@ -90,6 +90,8 @@ class ClickHouse:
     def __init__(self, cfg: ClickHouseConfig, masked_fields: frozenset[str] = frozenset()):
         self.cfg = cfg
         self.masked_fields = masked_fields
+        # A readonly=1 user can't set log_comment; found out on the first query.
+        self.log_comment = True
         self.allowed_functions = INTERNAL_TABLE_FUNCTIONS | {f.lower() for f in cfg.allowed_table_functions}
         self.url = cfg.url.rstrip("/") + "/"
         self.session = requests.Session()
@@ -135,8 +137,9 @@ class ClickHouse:
             **{k: str(v) for k, v in self.cfg.settings.items()},
             "default_format": "JSONCompactEachRowWithNamesAndTypes",
             "query_id": query_id,
-            "log_comment": f"dataplane-mcp user={user}",
         }
+        if self.log_comment:
+            url_params["log_comment"] = f"dataplane-mcp user={user}"
         if database or self.cfg.database:
             url_params["database"] = database or self.cfg.database
         url_params.update(query_params)
@@ -148,6 +151,10 @@ class ClickHouse:
         )
         with response:
             if not response.ok:
+                if "Cannot modify 'log_comment'" in response.text and "log_comment" in url_params:
+                    self.log_comment = False
+                    url_params = {k: v for k, v in url_params.items() if k != "log_comment"}
+                    return self._run(statement, url_params, query_id, max_rows, max_chars, mask_columns)
                 raise RuntimeError(response.text[:2000])
             lines = response.iter_lines(decode_unicode=True)
             columns = json.loads(next(lines, "[]") or "[]")
@@ -190,9 +197,10 @@ class ClickHouse:
         url_params = {
             "default_format": "JSONCompactEachRowWithNamesAndTypes",
             "query_id": str(uuid.uuid4()),
-            "log_comment": f"dataplane-mcp user={user}",
             **{f"param_{k}": param_value(v) for k, v in (params or {}).items()},
         }
+        if self.log_comment:
+            url_params["log_comment"] = f"dataplane-mcp user={user}"
         result = self._run(sql, url_params, url_params["query_id"], INTERNAL_ROWS, 50_000_000, mask_columns=False)
         if result["truncated"]:
             raise RuntimeError(f"metadata query returned {result['truncated']}; narrow it with a filter")

@@ -20,6 +20,9 @@ give it only these read policies:
 | view the data | `/data/process-groups/<root id>` | queue listings, FlowFile content |
 | view provenance | `/provenance`, `/provenance-data/process-groups/<root id>` | provenance tools |
 
+NiFi answers 400 to a `Host` it doesn't know, so the hostname in `url` must be in `nifi.web.proxy.host` (or be the
+node's own name). This bites when the gateway reaches NiFi through a load balancer or a Docker host alias.
+
 Never grant **proxy user requests**. NiFi 2 authorizes a proxied request on the end user's rights alone, so a proxying
 gateway could write wherever that user can.
 

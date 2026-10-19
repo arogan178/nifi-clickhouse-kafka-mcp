@@ -33,7 +33,7 @@ environments:
       # One of:
       auth: {type: mtls, cert: /certs/mcp.pem, key: /certs/mcp.key}
       # auth: {type: password, username: mcp, password: "${NIFI_PASSWORD}"}   # single-user, LDAP or Kerberos login
-      # auth: {type: token, token: "${NIFI_TOKEN}"}                         # a bearer token you manage
+      # auth: {type: token, token: "${NIFI_TOKEN}"}                         # a bearer token you rotate; NiFi tokens expire
       # auth: {type: none}                                                  # unsecured NiFi
       ca_bundle: /certs/ca.pem                    # default: system CAs
       verify_tls: true

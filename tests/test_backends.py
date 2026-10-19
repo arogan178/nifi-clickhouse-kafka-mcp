@@ -238,3 +238,27 @@ def test_component_state_is_split_per_node_and_masked():
 def test_clickhouse_masks_configured_column_names():
     lines = ['["id","Email"]', '["UInt64","String"]', '[1,"a@b.c"]']
     assert clickhouse(lines, masked=frozenset({"email"})).query("SELECT id, Email FROM t", "u")["rows"] == [[1, "***"]]
+
+
+def test_clickhouse_drops_log_comment_for_readonly_1_users():
+    refused = FakeResponse(
+        ok=False, text="Code: 164. DB::Exception: Cannot modify 'log_comment' setting in readonly mode"
+    )
+    answered = FakeResponse(lines=['["n"]', '["UInt8"]', "[1]"])
+    client = clickhouse([])
+    responses = iter([refused, answered])
+    client.session.response = None
+    client.session.post_responses = responses
+    original = client.session.post
+
+    def post(url, **kwargs):
+        if kwargs.get("data", b"").startswith(b"EXPLAIN AST"):
+            return original(url, **kwargs)
+        client.session.calls.append(("POST", url, kwargs))
+        return next(responses)
+
+    client.session.post = post
+    assert client.query("SELECT 1", "u")["rows"] == [[1]]
+    assert "log_comment" in client.session.calls[0][2]["params"]
+    assert "log_comment" not in client.session.calls[1][2]["params"]
+    assert client.log_comment is False

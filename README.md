@@ -15,6 +15,28 @@ Ask Claude, Cursor or any MCP client things like:
 It grew out of a gateway built to give a data platform team AI access to NiFi 2, ClickHouse and Strimzi Kafka
 clusters without handing out credentials or write access.
 
+## How it works
+
+```mermaid
+flowchart LR
+    clients["MCP clients<br/>Claude Code, Claude Desktop,<br/>Cursor, VS Code, ..."]
+    idp["OIDC provider<br/>Keycloak, Entra ID, Okta, ..."]
+    gw["<b>dataplane-mcp</b><br/>lock 1<br/>───<br/>token + group check<br/>read-only tools<br/>request allowlist<br/>SQL parse check<br/>masking, size caps<br/>audit, metrics"]
+    subgraph backends["Lock 2: read-only identities"]
+        nifi["NiFi<br/>view-only policies"]
+        ch["ClickHouse<br/>readonly user, SELECT grants"]
+        kafka["Kafka<br/>Read/Describe ACLs"]
+    end
+    clients -- "stdio, or HTTP<br/>+ bearer token" --> gw
+    clients -. "log in" .-> idp
+    gw -. "verify token" .-> idp
+    gw --> nifi
+    gw --> ch
+    gw --> kafka
+```
+
+Each environment (prod, staging, ...) has its own set of backends; one server serves them all.
+
 ## Why this one
 
 | | dataplane-mcp |
