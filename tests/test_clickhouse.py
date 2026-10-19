@@ -106,6 +106,44 @@ def test_refuses_writes_and_external_table_functions(ast, message):
         check_ast(ast)
 
 
+CLUSTER_URL = """SelectWithUnionQuery (children 1)
+ ExpressionList (children 1)
+  SelectQuery (children 2)
+   TablesInSelectQuery (children 1)
+    TablesInSelectQueryElement (children 1)
+     TableExpression (children 1)
+      Function cluster (children 1)
+       ExpressionList (children 2)
+        Literal 'default'
+        Function url (children 1)
+         ExpressionList (children 1)
+          Literal 'http://a'"""
+
+SCALAR_FILE = """SelectWithUnionQuery (children 1)
+ ExpressionList (children 1)
+  SelectQuery (children 1)
+   ExpressionList (children 1)
+    Function file (children 1)
+     ExpressionList (children 1)
+      Literal '/etc/passwd'"""
+
+EXPLAIN_INSERT = """Explain EXPLAIN PIPELINE (children 1)
+ InsertQuery   (children 2)
+  Function url (children 1)"""
+
+SCALAR_FORMAT = SCALAR_FILE.replace("Function file", "Function format")
+
+
+@pytest.mark.parametrize("ast, message", [(CLUSTER_URL, "url"), (SCALAR_FILE, "file"), (EXPLAIN_INSERT, "InsertQuery")])
+def test_refuses_nested_scalar_and_wrapped_forms(ast, message):
+    with pytest.raises(ValueError, match=message):
+        check_ast(ast)
+
+
+def test_scalar_format_is_fine():
+    check_ast(SCALAR_FORMAT)
+
+
 def test_extra_table_functions_can_be_allowed():
     check_ast(SELECT_URL, frozenset({"url"}))
 

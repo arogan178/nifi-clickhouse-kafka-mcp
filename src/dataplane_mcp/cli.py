@@ -73,6 +73,13 @@ def main(argv: list[str] | None = None) -> None:
     )
     if cfg.trusted_user_header:
         app = RequireHeader(app, cfg.trusted_user_header)
+        if args.host not in LOOPBACK:
+            logging.getLogger("dataplane_mcp").warning(
+                "trusting %s from anyone who can reach %s:%s; make sure only the proxy can",
+                cfg.trusted_user_header,
+                args.host,
+                args.port,
+            )
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")
 
 

@@ -105,6 +105,8 @@ class Config(Model):
     max_result_chars: int = 400_000
     # Binary payloads can't be masked, so they are described rather than returned unless this is on.
     show_binary: bool = False
+    # Serve Prometheus metrics at /metrics in HTTP mode. Unauthenticated, so off unless asked for.
+    metrics: bool = False
     environments: dict[str, Environment]
 
     @model_validator(mode="after")

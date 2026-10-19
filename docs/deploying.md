@@ -140,6 +140,6 @@ Each tool call writes one JSON line to the `dataplane_mcp.audit` logger on stder
 
 ClickHouse queries also carry `log_comment = 'dataplane-mcp user=alice'`, so `system.query_log` shows who asked.
 
-`GET /metrics` serves Prometheus metrics: `dataplane_mcp_tool_calls_total{tool, env, outcome}` and
+With `metrics: true` in the config, `GET /metrics` serves Prometheus metrics: `dataplane_mcp_tool_calls_total{tool, env, outcome}` and
 `dataplane_mcp_tool_duration_seconds{tool}`. Like `/healthz` it needs no token and shows environment and tool names, so
 expose it only to your monitoring network.

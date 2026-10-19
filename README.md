@@ -43,7 +43,7 @@ Each environment (prod, staging, ...) has its own set of backends; one server se
 |---|---|
 | **Read-only, twice** | Only read tools exist and only allowlisted requests are ever sent. Each backend identity is read-only too, so a bug in one lock is caught by the other. |
 | **Remote and multi-user** | Streamable HTTP with OAuth tokens from any OIDC provider (Keycloak, Entra ID, Okta, Auth0, Dex), an optional group gate, and no credentials on laptops. Or plain stdio for one person. |
-| **Audited** | One JSON line per call with the user, tool, arguments, outcome and size. ClickHouse queries carry the user into `system.query_log`. Prometheus metrics at `/metrics`. |
+| **Audited** | One JSON line per call with the user, tool, arguments, outcome and size. ClickHouse queries carry the user into `system.query_log`. Optional Prometheus metrics. |
 | **Context-safe** | Every list pages. ClickHouse streams and stops at a row or size cap and says so. A global result cap stops anything from flooding the model. |
 | **Masks secrets** | Passwords, tokens, API keys and credentials in JSON, YAML, NDJSON, URLs and `key=value` text are masked in tool results, plus any field names you configure (emails, phone numbers). Binary payloads, which can't be masked, are withheld unless you allow them. |
 | **Many clusters** | Named environments (prod, staging, ...), each with any mix of NiFi, ClickHouse and Kafka, behind one connector. |

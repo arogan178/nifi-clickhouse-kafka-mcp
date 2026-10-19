@@ -186,9 +186,11 @@ def build_server(cfg: Config) -> MCPServer:
     async def healthz(_: Request) -> PlainTextResponse:
         return PlainTextResponse("ok")
 
-    @server.custom_route("/metrics", methods=["GET"])
-    async def metrics(_: Request) -> Response:
-        return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+    if cfg.metrics:
+
+        @server.custom_route("/metrics", methods=["GET"])
+        async def metrics(_: Request) -> Response:
+            return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
     server.toolbox = box
     return server

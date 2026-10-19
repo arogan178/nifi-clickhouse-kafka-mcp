@@ -263,6 +263,11 @@ def test_nifi_paths_refuse_traversal():
         "/processors/..",
         "/processors/a#b",
         "/processors/a\\b",
+        "/processors/..;/x",
+        "/processors//x",
+        "/processors/a.b",
+        "processors/x",
+        "/processors/\u2025",
     ):
         with pytest.raises(ValueError):
             check_path(bad)

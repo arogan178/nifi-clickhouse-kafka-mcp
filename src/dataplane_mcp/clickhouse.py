@@ -28,29 +28,57 @@ INTERNAL_TABLE_FUNCTIONS = frozenset(
         "null",
         "loop",
         "mergetreeindex",
+        "mergetreeprojection",
+        "primes",
+        "viewexplain",
+        # Also the everyday scalar format('{} {}', a, b); as a table function it only parses inline data.
+        "format",
     }
+)
+# Used when system.table_functions can't be read; the server's own list is preferred because it grows.
+KNOWN_TABLE_FUNCTIONS = INTERNAL_TABLE_FUNCTIONS | frozenset(
+    """url urlcluster s3 s3cluster gcs oss cosn azureblobstorage azureblobstoragecluster hdfs hdfscluster file
+    filecluster remote remotesecure mysql postgresql mongodb jdbc odbc sqlite redis executable input iceberg icebergs3
+    icebergs3cluster icebergazure icebergazurecluster icebergHDFS iceberglocal deltalake deltalakes3 deltalakeazure
+    deltalakelocal hudi hive arrowflight ytsaurus paimon paimons3 paimonazure paimonhdfs paimonlocal dictionary
+    fuzzjson fuzzquery format generaterandomstructure""".lower().split()
 )
 INTERNAL_ROWS = 100_000
 
 
-def check_ast(ast: str, allowed_functions: frozenset[str] = INTERNAL_TABLE_FUNCTIONS) -> None:
-    """Refuse a statement whose EXPLAIN AST is not a read, or that calls a table function not allowed."""
+def check_ast(
+    ast: str,
+    allowed_functions: frozenset[str] = INTERNAL_TABLE_FUNCTIONS,
+    table_functions: frozenset[str] = KNOWN_TABLE_FUNCTIONS,
+) -> None:
+    """Refuse a statement whose EXPLAIN AST is not a read, or that names a table function not allowed anywhere,
+    including inside another function's arguments, such as cluster('c', url(...)), or as a scalar such as file()."""
     lines = ast.splitlines()
     root = lines[0].split(None, 1)[0] if lines else ""
+    # EXPLAIN wraps another statement; that one must be a read too.
+    depth = 0
+    while root == "Explain" and len(lines) > depth + 1:
+        depth += 1
+        root = lines[depth].split(None, 1)[0]
     if not root.startswith(READ_ROOTS):
         raise ValueError(f"only SELECT, WITH, SHOW, DESCRIBE, EXISTS and EXPLAIN statements are allowed, not {root}")
     refused = set()
     for i, line in enumerate(lines):
-        if line.strip().split(None, 1)[0:1] != ["TableExpression"]:
+        words = line.split()
+        if words[:1] == ["Function"] and words[1].lower() in table_functions - allowed_functions:
+            refused.add(words[1])
+        if words[:1] != ["TableExpression"]:
             continue
-        depth = len(line) - len(line.lstrip())
+        # Whatever stands in the FROM position must be allowed, even if the server's list doesn't know it.
+        indent = len(line) - len(line.lstrip())
         for child in lines[i + 1 :]:
-            child_depth = len(child) - len(child.lstrip())
-            if child_depth <= depth:
+            child_indent = len(child) - len(child.lstrip())
+            if child_indent <= indent:
                 break
-            words = child.split()
-            if child_depth == depth + 1 and words[0] == "Function" and words[1].lower() not in allowed_functions:
-                refused.add(words[1])
+            child_words = child.split()
+            if child_indent == indent + 1 and child_words[0] == "Function":
+                if child_words[1].lower() not in allowed_functions:
+                    refused.add(child_words[1])
     if refused:
         raise ValueError(
             f"table function {', '.join(sorted(refused))} is not allowed; only functions that read ClickHouse itself "
@@ -90,8 +118,8 @@ class ClickHouse:
     def __init__(self, cfg: ClickHouseConfig, masked_fields: frozenset[str] = frozenset()):
         self.cfg = cfg
         self.masked_fields = masked_fields
-        # A readonly=1 user can't set log_comment; found out on the first query.
-        self.log_comment = True
+        self._table_functions: frozenset[str] | None = None
+        self._log_comment: bool | None = None
         self.allowed_functions = INTERNAL_TABLE_FUNCTIONS | {f.lower() for f in cfg.allowed_table_functions}
         self.url = cfg.url.rstrip("/") + "/"
         self.session = requests.Session()
@@ -100,6 +128,25 @@ class ClickHouse:
             self.session.verify = False
         elif cfg.ca_bundle:
             self.session.verify = cfg.ca_bundle
+
+    def _scalar(self, sql: str) -> str | None:
+        response = self.session.post(
+            self.url, params={"default_format": "TabSeparatedRaw"}, data=sql.encode(), timeout=self.cfg.timeout_seconds
+        )
+        return response.text if response.ok else None
+
+    def table_functions(self) -> frozenset[str]:
+        if self._table_functions is None:
+            names = self._scalar("SELECT lower(name) FROM system.table_functions")
+            self._table_functions = frozenset(names.split()) | KNOWN_TABLE_FUNCTIONS if names else KNOWN_TABLE_FUNCTIONS
+        return self._table_functions
+
+    @property
+    def log_comment(self) -> bool:
+        # A readonly=1 user can't set any setting, log_comment included.
+        if self._log_comment is None:
+            self._log_comment = (self._scalar("SELECT getSetting('readonly')") or "").strip() != "1"
+        return self._log_comment
 
     def check(self, sql: str, params: dict | None = None) -> str:
         """The statement without a trailing semicolon, once ClickHouse's parser shows it is a plain read."""
@@ -115,7 +162,7 @@ class ClickHouse:
         )
         if not response.ok:
             raise ValueError(f"ClickHouse could not parse the query: {response.text[:1000]}")
-        check_ast(response.text, self.allowed_functions)
+        check_ast(response.text, self.allowed_functions, self.table_functions())
         return statement
 
     def query(
@@ -151,10 +198,6 @@ class ClickHouse:
         )
         with response:
             if not response.ok:
-                if "Cannot modify 'log_comment'" in response.text and "log_comment" in url_params:
-                    self.log_comment = False
-                    url_params = {k: v for k, v in url_params.items() if k != "log_comment"}
-                    return self._run(statement, url_params, query_id, max_rows, max_chars, mask_columns)
                 raise RuntimeError(response.text[:2000])
             lines = response.iter_lines(decode_unicode=True)
             columns = json.loads(next(lines, "[]") or "[]")

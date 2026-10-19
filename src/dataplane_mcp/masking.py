@@ -5,32 +5,42 @@ import re
 MASK = "***"
 SECRET_WORDS = r"pass(?:word|wd)?|pwd|secret|token|api[-_]?key|authorization|credential"
 SECRET_KEY = re.compile(SECRET_WORDS, re.I)
-URL_CREDENTIALS = re.compile(r"(\b[a-z][a-z0-9+.-]*://[^/\s:@]+:)[^@\s/]+@", re.I)
+# Quantifiers are bounded so matching stays linear on hostile input; an unbounded [\w.-]* is quadratic.
+URL_CREDENTIALS = re.compile(r"(\b[a-z][a-z0-9+.-]{0,31}://[^/\s:@]{0,256}:)[^@\s/]{1,256}@", re.I)
 
 
 @functools.cache
-def _pair_patterns(masked_fields: frozenset[str]) -> tuple[re.Pattern, re.Pattern]:
-    """key=value pairs (form bodies, query strings) and key: value pairs (YAML, headers, broken JSON)."""
-    names = [rf"[\w.-]*(?:{SECRET_WORDS})[\w.-]*"] + [re.escape(f) for f in sorted(masked_fields)]
+def _pair_patterns(masked_fields: frozenset[str]) -> tuple[re.Pattern, re.Pattern, re.Pattern]:
+    """key=value pairs (form bodies, query strings), key: value pairs (YAML, headers, JSON, escaped JSON in logs)
+    and <key>value</key> elements."""
+    names = [rf"[\w.-]{{0,64}}(?:{SECRET_WORDS})[\w.-]{{0,64}}"] + [re.escape(f) for f in sorted(masked_fields)]
     key = "|".join(names)
-    equals = re.compile(rf"(?<![\w.-])((?:{key}))=([^&\s]*)", re.I)
-    colon = re.compile(rf"""(?<![\w.-])(["']?)((?:{key}))\1(\s*:\s*)("(?:[^"\\]|\\.)*"|'[^']*'|[^\r\n,;&}}]*)""", re.I)
-    return equals, colon
+    equals = re.compile(rf"(?<![\w.-])((?:{key}))(\s{{0,8}}=\s{{0,8}})([^&\s]*)", re.I)
+    colon = re.compile(
+        rf"""(?<![\w.-])(\\?["']?)((?:{key}))\1(\s{{0,8}}:\s{{0,8}})(\\?"(?:[^"\\]|\\.)*"|'[^']*'|[^\r\n,;&}}]*)""",
+        re.I,
+    )
+    element = re.compile(rf"<((?:{key}))>[^<]{{0,10000}}</\1>", re.I)
+    return equals, colon, element
 
 
 def mask_text(text: str, masked_fields: frozenset[str] = frozenset()) -> str:
-    """Blank secret-looking (and configured) key=value and key: value pairs, and passwords in URLs."""
-    equals, colon = _pair_patterns(masked_fields)
-    # The pair regexes backtrack on every string; without "=" or ":" they cannot match.
+    """Blank secret-looking (and configured) key=value, key: value and <key> pairs, and passwords in URLs."""
+    equals, colon, element = _pair_patterns(masked_fields)
+    # The pair regexes cost time on every string; without "=", ":" or "<" they cannot match.
     if "=" in text:
-        text = equals.sub(rf"\1={MASK}", text)
+        text = equals.sub(rf"\1\2{MASK}", text)
     if ":" in text:
         text = URL_CREDENTIALS.sub(rf"\1{MASK}@", text)
         text = colon.sub(lambda m: f"{m[1]}{m[2]}{m[1]}{m[3]}{_masked_like(m[4])}", text)
+    if "<" in text:
+        text = element.sub(rf"<\1>{MASK}</\1>", text)
     return text
 
 
 def _masked_like(value: str) -> str:
+    if value[:2] == '\\"':
+        return f'\\"{MASK}\\"'
     if value[:1] in ("'", '"'):
         return f"{value[0]}{MASK}{value[0]}"
     return MASK if value.strip() else value

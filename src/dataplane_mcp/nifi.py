@@ -38,12 +38,13 @@ ALLOWED_REQUESTS = [
 ]
 
 
-# Ids end up in paths; "..", encoded characters or a query string would let one reach another endpoint.
-UNSAFE_PATH = re.compile(r"(^|/)\.{1,2}(/|$)|[%?#\\]")
+# Ids end up in paths. Every segment must be letters, digits, "-" or "_", so no "..", "..;", encoding, query
+# string or extra segment can reach another endpoint.
+SAFE_SEGMENT = re.compile(r"[A-Za-z0-9_-]+")
 
 
 def check_path(path: str) -> None:
-    if UNSAFE_PATH.search(path):
+    if not path.startswith("/") or not all(SAFE_SEGMENT.fullmatch(seg) for seg in path[1:].split("/")):
         raise ValueError(f"invalid id in NiFi path {path!r}")
 
 

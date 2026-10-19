@@ -28,6 +28,9 @@ max_result_chars: 400000
 # Binary Kafka values and FlowFile content can't be masked, so they are described (size only) unless this is true.
 show_binary: false
 
+# Prometheus metrics at /metrics (HTTP mode). No auth on that path, so expose it only to monitoring.
+metrics: false
+
 environments:
   prod:
     description: Production, EU region            # shown to the model by the environments tool

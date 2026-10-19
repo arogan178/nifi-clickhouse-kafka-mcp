@@ -162,3 +162,12 @@ def test_proxy_guard_rejects_mcp_requests_without_the_header():
     sent.clear()
     anyio.run(call, "/healthz", [])
     assert sent == ["app"]
+
+
+def test_metrics_are_opt_in():
+    def routes(c):
+        return {r.path for r in build_server(c)._custom_starlette_routes}
+
+    assert "/metrics" not in routes(cfg())
+    assert "/metrics" in routes(cfg(metrics=True))
+    assert "/healthz" in routes(cfg())

