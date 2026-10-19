@@ -5,8 +5,8 @@ import jwt
 import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
 
-from dataplane_mcp.auth import OIDCVerifier
-from dataplane_mcp.config import AuthConfig
+from nifi_clickhouse_kafka_mcp.auth import OIDCVerifier
+from nifi_clickhouse_kafka_mcp.config import AuthConfig
 
 ISSUER = "https://idp.example/realms/acme"
 RESOURCE = "https://mcp.example/mcp"
@@ -26,7 +26,9 @@ class StaticKeys:
 
 
 def verifier():
-    v = OIDCVerifier(AuthConfig(issuer=ISSUER, audience="dataplane-mcp", required_group="mcp-users"), RESOURCE)
+    v = OIDCVerifier(
+        AuthConfig(issuer=ISSUER, audience="nifi-clickhouse-kafka-mcp", required_group="mcp-users"), RESOURCE
+    )
     v._jwks = StaticKeys()
     return v
 
@@ -34,11 +36,11 @@ def verifier():
 def token(**overrides):
     claims = {
         "iss": ISSUER,
-        "aud": ["dataplane-mcp", "account"],
+        "aud": ["nifi-clickhouse-kafka-mcp", "account"],
         "exp": int(time.time()) + 300,
         "preferred_username": "some.engineer",
         "groups": ["mcp-users"],
-        "azp": "dataplane-mcp",
+        "azp": "nifi-clickhouse-kafka-mcp",
     }
     claims.update(overrides)
     return jwt.encode({k: v for k, v in claims.items() if v is not None}, KEY, algorithm="RS256")
@@ -78,7 +80,7 @@ def test_rejects_token_signed_by_another_key():
     forged = jwt.encode(
         {
             "iss": ISSUER,
-            "aud": "dataplane-mcp",
+            "aud": "nifi-clickhouse-kafka-mcp",
             "exp": int(time.time()) + 300,
             "preferred_username": "x",
             "groups": ["mcp-users"],
@@ -93,7 +95,7 @@ def test_nested_groups_claim_and_sub_fallback():
     v = OIDCVerifier(
         AuthConfig(
             issuer=ISSUER,
-            audience="dataplane-mcp",
+            audience="nifi-clickhouse-kafka-mcp",
             required_group="mcp-users",
             groups_claim="realm_access.roles",
             username_claim="email",
@@ -106,18 +108,18 @@ def test_nested_groups_claim_and_sub_fallback():
 
 
 def test_no_required_group_accepts_any_valid_token():
-    v = OIDCVerifier(AuthConfig(issuer=ISSUER, audience="dataplane-mcp"), RESOURCE)
+    v = OIDCVerifier(AuthConfig(issuer=ISSUER, audience="nifi-clickhouse-kafka-mcp"), RESOURCE)
     v._jwks = StaticKeys()
     assert anyio.run(v.verify_token, token(groups=None)).subject == "some.engineer"
 
 
 def test_unreachable_identity_provider_rejects():
-    v = OIDCVerifier(AuthConfig(issuer="http://127.0.0.1:9", audience="dataplane-mcp"), RESOURCE)
+    v = OIDCVerifier(AuthConfig(issuer="http://127.0.0.1:9", audience="nifi-clickhouse-kafka-mcp"), RESOURCE)
     assert anyio.run(v.verify_token, token()) is None
 
 
 def test_issuer_with_trailing_slash_is_compared_as_configured():
-    v = OIDCVerifier(AuthConfig(issuer=ISSUER + "/", audience="dataplane-mcp"), RESOURCE)
+    v = OIDCVerifier(AuthConfig(issuer=ISSUER + "/", audience="nifi-clickhouse-kafka-mcp"), RESOURCE)
     v._jwks = StaticKeys()
     assert anyio.run(v.verify_token, token(iss=ISSUER + "/")).subject == "some.engineer"
     assert anyio.run(v.verify_token, token()) is None
@@ -125,7 +127,7 @@ def test_issuer_with_trailing_slash_is_compared_as_configured():
 
 def test_unknown_key_ids_refetch_at_most_once_a_minute(monkeypatch):
     # Just after boot, as on a fresh container: the first refresh must still happen.
-    monkeypatch.setattr("dataplane_mcp.auth.time.monotonic", lambda: 5.0)
+    monkeypatch.setattr("nifi_clickhouse_kafka_mcp.auth.time.monotonic", lambda: 5.0)
     v = verifier()
     for _ in range(5):
         forged = jwt.encode({"iss": ISSUER}, KEY, algorithm="RS256", headers={"kid": "nope"})

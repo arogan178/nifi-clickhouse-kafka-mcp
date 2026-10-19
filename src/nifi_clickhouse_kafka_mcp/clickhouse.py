@@ -212,7 +212,7 @@ class ClickHouse:
             "query_id": query_id,
         }
         if self.log_comment:
-            url_params["log_comment"] = f"dataplane-mcp user={user}"
+            url_params["log_comment"] = f"nifi-clickhouse-kafka-mcp user={user}"
         if database or self.cfg.database:
             url_params["database"] = database or self.cfg.database
         url_params.update(query_params)
@@ -269,7 +269,7 @@ class ClickHouse:
             **{f"param_{k}": param_value(v) for k, v in (params or {}).items()},
         }
         if self.log_comment:
-            url_params["log_comment"] = f"dataplane-mcp user={user}"
+            url_params["log_comment"] = f"nifi-clickhouse-kafka-mcp user={user}"
         result = self._run(sql, url_params, url_params["query_id"], INTERNAL_ROWS, 50_000_000, mask_columns=False)
         if result["truncated"]:
             raise RuntimeError(f"metadata query returned {result['truncated']}; narrow it with a filter")

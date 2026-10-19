@@ -1,5 +1,5 @@
 [project]
-name = "dataplane-mcp"
+name = "nifi-clickhouse-kafka-mcp"
 version = "0.1.0"
 description = "Read-only MCP server for Apache NiFi, ClickHouse and Kafka, with OIDC, per-user audit and secret masking"
 readme = "README.md"
@@ -33,11 +33,11 @@ dependencies = [
 avro = ["fastavro>=1.9"]
 
 [project.scripts]
-dataplane-mcp = "dataplane_mcp.cli:main"
+nifi-clickhouse-kafka-mcp = "nifi_clickhouse_kafka_mcp.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/arogan178/dataplane-mcp"
-Issues = "https://github.com/arogan178/dataplane-mcp/issues"
+Homepage = "https://github.com/arogan178/nifi-clickhouse-kafka-mcp"
+Issues = "https://github.com/arogan178/nifi-clickhouse-kafka-mcp/issues"
 
 [dependency-groups]
 dev = ["pytest>=8", "ruff>=0.8", "fastavro>=1.9"]

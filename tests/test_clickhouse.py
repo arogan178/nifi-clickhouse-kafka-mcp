@@ -1,6 +1,6 @@
 import pytest
 
-from dataplane_mcp.clickhouse import check_ast, param_value
+from nifi_clickhouse_kafka_mcp.clickhouse import check_ast, param_value
 
 # EXPLAIN AST output captured from ClickHouse 26.3.
 SELECT_URL = """SelectWithUnionQuery (children 1)

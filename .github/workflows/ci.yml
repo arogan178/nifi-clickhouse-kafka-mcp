@@ -44,4 +44,4 @@ jobs:
           ' | docker compose exec -T kafka /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic orders --reader-property parse.key=true --reader-property 'key.separator=|'
           docker compose exec -T kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic orders --group billing --from-beginning --max-messages 120 > /dev/null
       - run: uv run pytest tests/integration
-        env: {DATAPLANE_MCP_DEMO: "1"}
+        env: {NIFI_CLICKHOUSE_KAFKA_MCP_DEMO: "1"}

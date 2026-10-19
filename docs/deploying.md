@@ -1,6 +1,6 @@
 # Deploying for a team
 
-Run one dataplane-mcp over HTTP, let people log in with their own accounts, and give the server read-only identities
+Run one nifi-clickhouse-kafka-mcp over HTTP, let people log in with their own accounts, and give the server read-only identities
 on every backend.
 
 ## 1. Read-only backend identities
@@ -9,7 +9,7 @@ This is the second lock. Set it up even though the gateway only sends reads.
 
 ### NiFi
 
-Create an identity for the gateway (a client certificate such as `CN=dataplane-mcp`, or an LDAP/single-user login) and
+Create an identity for the gateway (a client certificate such as `CN=nifi-clickhouse-kafka-mcp`, or an LDAP/single-user login) and
 give it only these read policies:
 
 | Policy | Resource | Needed for |
@@ -90,7 +90,7 @@ KEYCLOAK_ADMIN_USER=admin KEYCLOAK_ADMIN_PASSWORD=... python scripts/keycloak_cl
 Users then connect with a fixed client id:
 
 ```bash
-claude mcp add --transport http --client-id dataplane-mcp --callback-port 47130 dataplane https://mcp.example.com/mcp
+claude mcp add --transport http --client-id nifi-clickhouse-kafka-mcp --callback-port 47130 data https://mcp.example.com/mcp
 ```
 
 Clients that register themselves (Claude.ai, ChatGPT, VS Code) need dynamic client registration on the provider. In
@@ -122,7 +122,7 @@ Docker:
 
 ```bash
 docker run -p 8080:8080 -v $PWD/config.yaml:/config/config.yaml:ro \
-  -e CLICKHOUSE_PASSWORD -e KAFKA_PASSWORD ghcr.io/arogan178/dataplane-mcp
+  -e CLICKHOUSE_PASSWORD -e KAFKA_PASSWORD ghcr.io/arogan178/nifi-clickhouse-kafka-mcp
 ```
 
 The image listens on 8080 in HTTP mode. Put TLS in front of it (ingress or load balancer) and set `public_url` to the
@@ -136,14 +136,14 @@ is only for when a proxy in front authenticates every request.
 
 ## 4. Audit and metrics
 
-Each tool call writes one JSON line to the `dataplane_mcp.audit` logger on stderr:
+Each tool call writes one JSON line to the `nifi_clickhouse_kafka_mcp.audit` logger on stderr:
 
 ```json
 {"user": "alice", "tool": "clickhouse_query", "args": {"env": "prod", "sql": "SELECT ..."}, "outcome": "ok", "ms": 30, "chars": 328}
 ```
 
-ClickHouse queries also carry `log_comment = 'dataplane-mcp user=alice'`, so `system.query_log` shows who asked.
+ClickHouse queries also carry `log_comment = 'nifi-clickhouse-kafka-mcp user=alice'`, so `system.query_log` shows who asked.
 
-With `metrics: true` in the config, `GET /metrics` serves Prometheus metrics: `dataplane_mcp_tool_calls_total{tool, env, outcome}` and
-`dataplane_mcp_tool_duration_seconds{tool}`. Like `/healthz` it needs no token and shows environment and tool names, so
+With `metrics: true` in the config, `GET /metrics` serves Prometheus metrics: `nifi_clickhouse_kafka_mcp_tool_calls_total{tool, env, outcome}` and
+`nifi_clickhouse_kafka_mcp_tool_duration_seconds{tool}`. Like `/healthz` it needs no token and shows environment and tool names, so
 expose it only to your monitoring network.

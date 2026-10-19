@@ -228,7 +228,7 @@ class Kafka:
 
     def _consumer(self) -> Consumer:
         # librdkafka insists on a group.id; assign() without commits never joins or touches it.
-        return Consumer({**self.conf, "group.id": "dataplane-mcp-unused", "enable.auto.commit": False})
+        return Consumer({**self.conf, "group.id": "nifi-clickhouse-kafka-mcp-unused", "enable.auto.commit": False})
 
     def cluster(self) -> dict:
         metadata = self.admin.list_topics(timeout=15)

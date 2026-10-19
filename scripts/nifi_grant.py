@@ -1,4 +1,4 @@
-"""Give the dataplane-mcp identity view-only access in a secured NiFi cluster.
+"""Give the nifi-clickhouse-kafka-mcp identity view-only access in a secured NiFi cluster.
 
 Never give the gateway "proxy user requests": NiFi 2 authorizes a proxied request on the end user's
 rights alone, so a proxying gateway could write wherever the user can.
@@ -6,7 +6,7 @@ rights alone, so a proxying gateway could write wherever the user can.
 The gateway identity must already exist (users.xml or your user group provider). Runs with a node's
 certificate, acting as the initial admin through NiFi's proxy header:
 
-    python3 nifi_grant.py https://<node>:8443/nifi-api node.pem node.key ca.pem "<initial admin>" "CN=dataplane-mcp" [--data]
+    python3 nifi_grant.py https://<node>:8443/nifi-api node.pem node.key ca.pem "<initial admin>" "CN=nifi-clickhouse-kafka-mcp" [--data]
 
 --data also grants view the data and view provenance on the root group, which the queue, FlowFile and
 provenance tools need. These are read policies; nothing here grants modify.

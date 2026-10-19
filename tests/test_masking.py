@@ -2,7 +2,7 @@ import time
 
 import pytest
 
-from dataplane_mcp.masking import mask_document, mask_text
+from nifi_clickhouse_kafka_mcp.masking import mask_document, mask_text
 
 
 @pytest.mark.parametrize(

@@ -1,7 +1,7 @@
 """End to end against examples/demo: the real server over stdio, real NiFi 2, ClickHouse and Kafka.
 
 Run with: docker compose -f examples/demo/compose.yaml up -d, seed (see examples/demo/README.md), then
-DATAPLANE_MCP_DEMO=1 uv run pytest tests/integration
+NIFI_CLICKHOUSE_KAFKA_MCP_DEMO=1 uv run pytest tests/integration
 """
 
 import json
@@ -14,13 +14,15 @@ import pytest
 import requests
 from mcp import Client, StdioServerParameters
 
-pytestmark = pytest.mark.skipif(os.environ.get("DATAPLANE_MCP_DEMO") != "1", reason="needs the demo stack")
+pytestmark = pytest.mark.skipif(os.environ.get("NIFI_CLICKHOUSE_KAFKA_MCP_DEMO") != "1", reason="needs the demo stack")
 CONFIG = Path(__file__).parents[2] / "examples" / "demo" / "config.yaml"
 
 
 def call_all(calls: list[tuple[str, dict]]) -> list:
     async def run():
-        server = StdioServerParameters(command=shutil.which("dataplane-mcp"), args=["--config", str(CONFIG)])
+        server = StdioServerParameters(
+            command=shutil.which("nifi-clickhouse-kafka-mcp"), args=["--config", str(CONFIG)]
+        )
         results = []
         async with Client(server) as client:
             for name, args in calls:

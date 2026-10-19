@@ -1,6 +1,6 @@
-# dataplane-mcp
+# nifi-clickhouse-kafka-mcp
 
-<!-- mcp-name: io.github.arogan178/dataplane-mcp -->
+<!-- mcp-name: io.github.arogan178/nifi-clickhouse-kafka-mcp -->
 
 A read-only [MCP](https://modelcontextprotocol.io) server that lets AI assistants look inside **Apache NiFi**,
 **ClickHouse** and **Kafka**: one server, every environment, and nothing it can break.
@@ -23,7 +23,7 @@ clusters without handing out credentials or write access.
 flowchart LR
     clients["MCP clients<br/>Claude Code, Claude Desktop,<br/>Cursor, VS Code, ..."]
     idp["OIDC provider<br/>Keycloak, Entra ID, Okta, ..."]
-    gw["<b>dataplane-mcp</b><br/>lock 1<br/>───<br/>token + group check<br/>read-only tools<br/>request allowlist<br/>SQL parse check<br/>masking, size caps<br/>audit, metrics"]
+    gw["<b>nifi-clickhouse-kafka-mcp</b><br/>lock 1<br/>───<br/>token + group check<br/>read-only tools<br/>request allowlist<br/>SQL parse check<br/>masking, size caps<br/>audit, metrics"]
     subgraph backends["Lock 2: read-only identities"]
         nifi["NiFi<br/>view-only policies"]
         ch["ClickHouse<br/>readonly user, SELECT grants"]
@@ -41,7 +41,7 @@ Each environment (prod, staging, ...) has its own set of backends; one server se
 
 ## Why this one
 
-| | dataplane-mcp |
+| | nifi-clickhouse-kafka-mcp |
 |---|---|
 | **Read-only, twice** | Only read tools exist and only allowlisted requests are ever sent. Each backend identity is read-only too, so a bug in one lock is caught by the other. |
 | **Remote and multi-user** | Streamable HTTP with OAuth tokens from any OIDC provider (Keycloak, Entra ID, Okta, Auth0, Dex), an optional group gate, and no credentials on laptops. Or plain stdio for one person. |
@@ -59,10 +59,10 @@ which of their users' complaints it answers.
 Try it against a local NiFi 2, ClickHouse and Kafka:
 
 ```bash
-git clone https://github.com/arogan178/dataplane-mcp && cd dataplane-mcp/examples/demo
+git clone https://github.com/arogan178/nifi-clickhouse-kafka-mcp && cd nifi-clickhouse-kafka-mcp/examples/demo
 docker compose up -d          # NiFi takes about a minute
 uv run --with requests python seed_nifi.py
-claude mcp add dataplane -- uvx dataplane-mcp --config "$PWD/config.yaml"
+claude mcp add data -- uvx nifi-clickhouse-kafka-mcp --config "$PWD/config.yaml"
 ```
 
 Then ask Claude Code "what's wrong in the demo NiFi flow?". [examples/demo/README.md](examples/demo/README.md) has
@@ -93,24 +93,24 @@ environments:
 ```
 
 `${VAR}` and `${VAR:-default}` read environment variables, so secrets stay out of the file.
-`dataplane-mcp --config config.yaml --check` validates it and lists the tools it would serve.
+`nifi-clickhouse-kafka-mcp --config config.yaml --check` validates it and lists the tools it would serve.
 
 ## Connecting
 
 **One person, stdio.** The server runs on your machine with your config:
 
 ```bash
-claude mcp add dataplane -- uvx dataplane-mcp --config /path/to/config.yaml
+claude mcp add data -- uvx nifi-clickhouse-kafka-mcp --config /path/to/config.yaml
 ```
 
 ```json
-{ "mcpServers": { "dataplane": { "command": "uvx", "args": ["dataplane-mcp", "--config", "/path/to/config.yaml"] } } }
+{ "mcpServers": { "data": { "command": "uvx", "args": ["nifi-clickhouse-kafka-mcp", "--config", "/path/to/config.yaml"] } } }
 ```
 
 **A team, HTTP with OAuth.** Run it once (Docker or Kubernetes), and everyone logs in with their own account:
 
 ```bash
-claude mcp add --transport http --client-id dataplane-mcp --callback-port 47130 dataplane https://mcp.example.com/mcp
+claude mcp add --transport http --client-id nifi-clickhouse-kafka-mcp --callback-port 47130 data https://mcp.example.com/mcp
 ```
 
 No identity provider? Put it behind the proxy you already have (oauth2-proxy, Cloudflare Access, Tailscale, ...) and
@@ -178,7 +178,7 @@ Report vulnerabilities as described in [SECURITY.md](SECURITY.md).
 uv sync
 uv run pytest                                             # unit tests
 docker compose -f examples/demo/compose.yaml up -d        # then seed, see examples/demo/README.md
-DATAPLANE_MCP_DEMO=1 uv run pytest tests/integration      # end to end against real NiFi, ClickHouse, Kafka
+NIFI_CLICKHOUSE_KAFKA_MCP_DEMO=1 uv run pytest tests/integration      # end to end against real NiFi, ClickHouse, Kafka
 ```
 
 ## Roadmap

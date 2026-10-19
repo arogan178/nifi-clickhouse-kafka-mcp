@@ -418,58 +418,6 @@ wheels = [
 ]
 
 [[package]]
-name = "dataplane-mcp"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "anyio" },
-    { name = "confluent-kafka" },
-    { name = "mcp" },
-    { name = "prometheus-client" },
-    { name = "pydantic" },
-    { name = "pyjwt", extra = ["crypto"] },
-    { name = "pyyaml" },
-    { name = "requests" },
-    { name = "starlette" },
-    { name = "uvicorn" },
-]
-
-[package.optional-dependencies]
-avro = [
-    { name = "fastavro" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "fastavro" },
-    { name = "pytest" },
-    { name = "ruff" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "anyio", specifier = ">=4.9" },
-    { name = "confluent-kafka", specifier = ">=2.6" },
-    { name = "fastavro", marker = "extra == 'avro'", specifier = ">=1.9" },
-    { name = "mcp", specifier = ">=2.3,<3" },
-    { name = "prometheus-client", specifier = ">=0.21" },
-    { name = "pydantic", specifier = ">=2.12" },
-    { name = "pyjwt", extras = ["crypto"], specifier = ">=2.10" },
-    { name = "pyyaml", specifier = ">=6" },
-    { name = "requests", specifier = ">=2.32" },
-    { name = "starlette", specifier = ">=0.48" },
-    { name = "uvicorn", specifier = ">=0.31" },
-]
-provides-extras = ["avro"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "fastavro", specifier = ">=1.9" },
-    { name = "pytest", specifier = ">=8" },
-    { name = "ruff", specifier = ">=0.8" },
-]
-
-[[package]]
 name = "fastavro"
 version = "1.13.1"
 source = { registry = "https://pypi.org/simple" }
@@ -645,6 +593,58 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/9e/2d/7c251e34207f6c51000312fc8839111ac45cfe02023f90b44e7f1051dd8e/mcp_types-2.3.0.tar.gz", hash = "sha256:d1e46549edb35ee19a94940fcee6d1addd7e589ab7ea92dda83f5d84781fc362", size = 65898, upload-time = "2026-10-02T22:06:57.863Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ce/48/32583066b155bb5d4507e7887dc88ee23118cc4de8e2a12870c49719e2a8/mcp_types-2.3.0-py3-none-any.whl", hash = "sha256:968efdbdaedfab06adae40d378a34395f1090c5921d4be3c9cde283aaf76d91d", size = 69108, upload-time = "2026-10-02T22:06:54.099Z" },
+]
+
+[[package]]
+name = "nifi-clickhouse-kafka-mcp"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "anyio" },
+    { name = "confluent-kafka" },
+    { name = "mcp" },
+    { name = "prometheus-client" },
+    { name = "pydantic" },
+    { name = "pyjwt", extra = ["crypto"] },
+    { name = "pyyaml" },
+    { name = "requests" },
+    { name = "starlette" },
+    { name = "uvicorn" },
+]
+
+[package.optional-dependencies]
+avro = [
+    { name = "fastavro" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "fastavro" },
+    { name = "pytest" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "anyio", specifier = ">=4.9" },
+    { name = "confluent-kafka", specifier = ">=2.6" },
+    { name = "fastavro", marker = "extra == 'avro'", specifier = ">=1.9" },
+    { name = "mcp", specifier = ">=2.3,<3" },
+    { name = "prometheus-client", specifier = ">=0.21" },
+    { name = "pydantic", specifier = ">=2.12" },
+    { name = "pyjwt", extras = ["crypto"], specifier = ">=2.10" },
+    { name = "pyyaml", specifier = ">=6" },
+    { name = "requests", specifier = ">=2.32" },
+    { name = "starlette", specifier = ">=0.48" },
+    { name = "uvicorn", specifier = ">=0.31" },
+]
+provides-extras = ["avro"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "fastavro", specifier = ">=1.9" },
+    { name = "pytest", specifier = ">=8" },
+    { name = "ruff", specifier = ">=0.8" },
 ]
 
 [[package]]

@@ -1,9 +1,9 @@
 import json
 from datetime import UTC, datetime
 
-from dataplane_mcp.kafka import Decoder, lag_summary, message_matches
-from dataplane_mcp.masking import mask_text
-from dataplane_mcp.paging import to_millis
+from nifi_clickhouse_kafka_mcp.kafka import Decoder, lag_summary, message_matches
+from nifi_clickhouse_kafka_mcp.masking import mask_text
+from nifi_clickhouse_kafka_mcp.paging import to_millis
 
 MASKED = frozenset({"email", "phone"})
 DECODER = Decoder(MASKED)

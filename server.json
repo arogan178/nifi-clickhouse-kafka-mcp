@@ -1,17 +1,17 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.arogan178/dataplane-mcp",
-  "title": "dataplane-mcp",
+  "name": "io.github.arogan178/nifi-clickhouse-kafka-mcp",
+  "title": "nifi-clickhouse-kafka-mcp",
   "description": "Read-only Apache NiFi, ClickHouse and Kafka access with OIDC, audit and secret masking",
   "repository": {
-    "url": "https://github.com/arogan178/dataplane-mcp",
+    "url": "https://github.com/arogan178/nifi-clickhouse-kafka-mcp",
     "source": "github"
   },
   "version": "0.1.0",
   "packages": [
     {
       "registryType": "pypi",
-      "identifier": "dataplane-mcp",
+      "identifier": "nifi-clickhouse-kafka-mcp",
       "version": "0.1.0",
       "runtimeHint": "uvx",
       "transport": {
@@ -19,7 +19,7 @@
       },
       "environmentVariables": [
         {
-          "name": "DATAPLANE_MCP_CONFIG",
+          "name": "NIFI_CLICKHOUSE_KAFKA_MCP_CONFIG",
           "description": "Path to the config file; see examples/config.example.yaml in the repository",
           "isRequired": true,
           "format": "filepath"

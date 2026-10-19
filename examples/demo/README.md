@@ -1,6 +1,6 @@
 # Demo stack
 
-A local NiFi 2, ClickHouse and Kafka with some data in each, to try dataplane-mcp without touching real systems.
+A local NiFi 2, ClickHouse and Kafka with some data in each, to try nifi-clickhouse-kafka-mcp without touching real systems.
 
 ```bash
 docker compose up -d
@@ -32,7 +32,7 @@ docker compose exec -T kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstra
 Then point a client at [config.yaml](config.yaml):
 
 ```bash
-claude mcp add dataplane -- uvx dataplane-mcp --config "$PWD/config.yaml"
+claude mcp add data -- uvx nifi-clickhouse-kafka-mcp --config "$PWD/config.yaml"
 ```
 
 Things to ask:
@@ -44,5 +44,5 @@ Things to ask:
 - "Which ClickHouse columns hold customer data?"
 - "Insert a row into shop.orders." (it can't)
 
-`DATAPLANE_MCP_DEMO=1 uv run pytest tests/integration` from the repository root runs the end-to-end tests against this
+`NIFI_CLICKHOUSE_KAFKA_MCP_DEMO=1 uv run pytest tests/integration` from the repository root runs the end-to-end tests against this
 stack. `docker compose down` removes it.

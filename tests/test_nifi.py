@@ -1,6 +1,6 @@
 import pytest
 
-from dataplane_mcp.nifi import (
+from nifi_clickhouse_kafka_mcp.nifi import (
     check_path,
     check_request,
     content_slice,

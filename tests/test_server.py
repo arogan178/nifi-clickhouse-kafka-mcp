@@ -5,10 +5,10 @@ from pathlib import Path
 import anyio
 import pytest
 
-from dataplane_mcp import cli, config
-from dataplane_mcp.server import build_server
+from nifi_clickhouse_kafka_mcp import cli, config
+from nifi_clickhouse_kafka_mcp.server import build_server
 
-SRC = Path(__file__).parent.parent / "src" / "dataplane_mcp"
+SRC = Path(__file__).parent.parent / "src" / "nifi_clickhouse_kafka_mcp"
 
 
 def cfg(**overrides):

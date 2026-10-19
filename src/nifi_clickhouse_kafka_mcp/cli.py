@@ -16,14 +16,14 @@ LOOPBACK = {"127.0.0.1", "localhost", "::1"}
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
-        prog="dataplane-mcp", description="Read-only MCP server for NiFi, ClickHouse and Kafka"
+        prog="nifi-clickhouse-kafka-mcp", description="Read-only MCP server for NiFi, ClickHouse and Kafka"
     )
-    parser.add_argument("--config", default=os.environ.get("DATAPLANE_MCP_CONFIG", "config.yaml"))
+    parser.add_argument("--config", default=os.environ.get("NIFI_CLICKHOUSE_KAFKA_MCP_CONFIG", "config.yaml"))
     parser.add_argument(
-        "--transport", choices=["stdio", "http"], default=os.environ.get("DATAPLANE_MCP_TRANSPORT", "stdio")
+        "--transport", choices=["stdio", "http"], default=os.environ.get("NIFI_CLICKHOUSE_KAFKA_MCP_TRANSPORT", "stdio")
     )
-    parser.add_argument("--host", default=os.environ.get("DATAPLANE_MCP_HOST", "127.0.0.1"))
-    parser.add_argument("--port", type=int, default=int(os.environ.get("DATAPLANE_MCP_PORT", "8080")))
+    parser.add_argument("--host", default=os.environ.get("NIFI_CLICKHOUSE_KAFKA_MCP_HOST", "127.0.0.1"))
+    parser.add_argument("--port", type=int, default=int(os.environ.get("NIFI_CLICKHOUSE_KAFKA_MCP_PORT", "8080")))
     parser.add_argument(
         "--allow-unauthenticated",
         action="store_true",
@@ -38,12 +38,12 @@ def main(argv: list[str] | None = None) -> None:
     try:
         cfg = config.load(args.config)
     except (OSError, ValueError) as e:
-        sys.exit(f"dataplane-mcp: {args.config}: {e}")
+        sys.exit(f"nifi-clickhouse-kafka-mcp: {args.config}: {e}")
     try:
         server = build_server(cfg)
     except OSError as e:
         # Missing or unreadable certificate and key files.
-        sys.exit(f"dataplane-mcp: {e.strerror or e}: {e.filename or ''}")
+        sys.exit(f"nifi-clickhouse-kafka-mcp: {e.strerror or e}: {e.filename or ''}")
 
     if args.check:
         for name, env in cfg.environments.items():
@@ -59,7 +59,7 @@ def main(argv: list[str] | None = None) -> None:
     authenticated = cfg.auth or cfg.trusted_user_header
     if not authenticated and args.host not in LOOPBACK and not args.allow_unauthenticated:
         sys.exit(
-            f"dataplane-mcp: refusing to serve HTTP on {args.host} without auth; configure auth or "
+            f"nifi-clickhouse-kafka-mcp: refusing to serve HTTP on {args.host} without auth; configure auth or "
             "trusted_user_header, bind to 127.0.0.1, or pass --allow-unauthenticated"
         )
     security = None
@@ -74,7 +74,7 @@ def main(argv: list[str] | None = None) -> None:
     if cfg.trusted_user_header:
         app = RequireHeader(app, cfg.trusted_user_header)
         if args.host not in LOOPBACK:
-            logging.getLogger("dataplane_mcp").warning(
+            logging.getLogger("nifi_clickhouse_kafka_mcp").warning(
                 "trusting %s from anyone who can reach %s:%s; make sure only the proxy can",
                 cfg.trusted_user_header,
                 args.host,

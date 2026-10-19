@@ -1,7 +1,7 @@
-"""Create or update a public OAuth client and access group for dataplane-mcp in a Keycloak realm.
+"""Create or update a public OAuth client and access group for nifi-clickhouse-kafka-mcp in a Keycloak realm.
 
     KEYCLOAK_ADMIN_USER=... KEYCLOAK_ADMIN_PASSWORD=... \\
-        python keycloak_client.py https://keycloak.example.com my-realm [--client-id dataplane-mcp] [--group mcp-users]
+        python keycloak_client.py https://keycloak.example.com my-realm [--client-id nifi-clickhouse-kafka-mcp] [--group mcp-users]
 
 The base URL is what comes before /realms (include /auth on Keycloak 16 and older). The default redirect
 URIs match `claude mcp add --client-id <id> --callback-port 47130`. Clients that register themselves
@@ -58,7 +58,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("base")
     parser.add_argument("realm")
-    parser.add_argument("--client-id", default="dataplane-mcp")
+    parser.add_argument("--client-id", default="nifi-clickhouse-kafka-mcp")
     parser.add_argument("--group", default="mcp-users")
     parser.add_argument("--callback-port", type=int, default=47130)
     args = parser.parse_args()

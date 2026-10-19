@@ -22,10 +22,10 @@ from .auth import OIDCVerifier
 from .config import Config
 from .masking import mask_text
 
-audit = logging.getLogger("dataplane_mcp.audit")
+audit = logging.getLogger("nifi_clickhouse_kafka_mcp.audit")
 READ_ONLY = ToolAnnotations(read_only_hint=True, destructive_hint=False, idempotent_hint=True, open_world_hint=False)
-CALLS = Counter("dataplane_mcp_tool_calls_total", "Tool calls", ["tool", "env", "outcome"])
-DURATION = Histogram("dataplane_mcp_tool_duration_seconds", "Tool call duration", ["tool"])
+CALLS = Counter("nifi_clickhouse_kafka_mcp_tool_calls_total", "Tool calls", ["tool", "env", "outcome"])
+DURATION = Histogram("nifi_clickhouse_kafka_mcp_tool_duration_seconds", "Tool call duration", ["tool"])
 
 INSTRUCTIONS = """Read-only access to NiFi, ClickHouse and Kafka. Nothing here can change state.
 
@@ -49,7 +49,7 @@ timestamp or the end. kafka_search scans every partition for a key, substring or
 
 def package_version() -> str:
     try:
-        return version("dataplane-mcp")
+        return version("nifi-clickhouse-kafka-mcp")
     except PackageNotFoundError:
         return "0.0.0"
 
@@ -153,10 +153,10 @@ def build_server(cfg: Config) -> MCPServer:
             issuer_url=cfg.auth.issuer, resource_server_url=resource, validate_token_resource=False
         )
     server = MCPServer(
-        name="dataplane-mcp",
+        name="nifi-clickhouse-kafka-mcp",
         version=package_version(),
         instructions=instructions,
-        website_url="https://github.com/arogan178/dataplane-mcp",
+        website_url="https://github.com/arogan178/nifi-clickhouse-kafka-mcp",
         **kwargs,
     )
     box = Toolbox(server, cfg)

@@ -1,4 +1,4 @@
-from dataplane_mcp.paging import page
+from nifi_clickhouse_kafka_mcp.paging import page
 
 
 def test_first_middle_and_last_page():

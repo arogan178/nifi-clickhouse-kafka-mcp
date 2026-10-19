@@ -3,10 +3,10 @@ import json
 
 import fastavro
 
-from dataplane_mcp.clickhouse import ClickHouse
-from dataplane_mcp.config import ClickHouseConfig, SchemaRegistryConfig
-from dataplane_mcp.kafka import Decoder, message_matches
-from dataplane_mcp.nifi import component_state, flow_tree, health_report
+from nifi_clickhouse_kafka_mcp.clickhouse import ClickHouse
+from nifi_clickhouse_kafka_mcp.config import ClickHouseConfig, SchemaRegistryConfig
+from nifi_clickhouse_kafka_mcp.kafka import Decoder, message_matches
+from nifi_clickhouse_kafka_mcp.nifi import component_state, flow_tree, health_report
 
 SCHEMA = {
     "type": "record",
@@ -109,7 +109,7 @@ def test_clickhouse_streams_rows_and_reports_stats():
     assert result["stats"] == {"read_rows": "2", "read_bytes": "16", "elapsed_ns": "5"}
     sent = client.session.calls[0][2]["params"]
     assert sent["param_min"] == "0" and sent["max_execution_time"] == "30"
-    assert sent["log_comment"] == "dataplane-mcp user=ann"
+    assert sent["log_comment"] == "nifi-clickhouse-kafka-mcp user=ann"
 
 
 def test_clickhouse_cuts_at_rows_and_characters():
@@ -252,4 +252,4 @@ def test_clickhouse_leaves_out_log_comment_for_readonly_1_users():
     assert "log_comment" not in client.session.calls[0][2]["params"]
     tagged = clickhouse(['["n"]', '["UInt8"]', "[1]"])
     tagged.query("SELECT 1", "u")
-    assert tagged.session.calls[0][2]["params"]["log_comment"] == "dataplane-mcp user=u"
+    assert tagged.session.calls[0][2]["params"]["log_comment"] == "nifi-clickhouse-kafka-mcp user=u"

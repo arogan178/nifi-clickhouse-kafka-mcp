@@ -1,4 +1,4 @@
-# A local NiFi 2, ClickHouse and Kafka to try dataplane-mcp against: docker compose up -d, then see README.md.
+# A local NiFi 2, ClickHouse and Kafka to try nifi-clickhouse-kafka-mcp against: docker compose up -d, then see README.md.
 services:
   clickhouse:
     image: clickhouse/clickhouse-server:26.3
